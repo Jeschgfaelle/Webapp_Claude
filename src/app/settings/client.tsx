@@ -1,12 +1,11 @@
 "use client";
 
-import { useTransition, useState } from "react";
+import { useTransition, useState, type FormEvent } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { updateSettings } from "@/lib/actions/settings";
 import {
   Settings as SettingsIcon,
@@ -32,7 +31,9 @@ export function SettingsPageClient({ settings }: { settings: SettingsData }) {
   const [isPending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
 
-  function handleSubmit(formData: FormData) {
+  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
     setSaved(false);
     startTransition(async () => {
       const result = await updateSettings(formData);
@@ -55,13 +56,13 @@ export function SettingsPageClient({ settings }: { settings: SettingsData }) {
         </p>
       </div>
 
-      <form action={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-6">
         {/* Cash Settings */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <Wallet className="h-4 w-4" />
-              Cash & Forecast
+              Cash &amp; Forecast
             </CardTitle>
             <CardDescription>
               Set your current cash position and forecast parameters

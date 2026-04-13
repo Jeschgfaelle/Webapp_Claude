@@ -1,17 +1,16 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, type FormEvent } from "react";
 import type { Scenario, ScenarioResult, SuggestedRecurring } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { ScenarioToggle } from "@/components/dashboard/scenario-toggle";
 import { CashflowChart } from "@/components/dashboard/cashflow-chart";
 import { RunwayIndicator } from "@/components/dashboard/runway-indicator";
-import { formatCHF, formatDate } from "@/lib/format";
+import { formatCHF } from "@/lib/format";
 import {
   createRecurringItem,
   deleteRecurringItem,
@@ -81,6 +80,15 @@ export function ForecastPageClient({
     formData.set("category", s.category);
     startTransition(async () => {
       await createRecurringItem(formData);
+    });
+  }
+
+  function handleAddFormSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    startTransition(async () => {
+      const result = await createRecurringItem(formData);
+      if (result.success) setShowAddForm(false);
     });
   }
 
@@ -263,12 +271,7 @@ export function ForecastPageClient({
           </CardHeader>
           <CardContent>
             <form
-              action={(formData) => {
-                startTransition(async () => {
-                  const result = await createRecurringItem(formData);
-                  if (result.success) setShowAddForm(false);
-                });
-              }}
+              onSubmit={handleAddFormSubmit}
               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
             >
               <div className="space-y-2">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, type FormEvent } from "react";
 import {
   Dialog,
   DialogContent,
@@ -47,7 +47,9 @@ export function EntryFormModal({
     type === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
   const isEditing = !!initialData?.id;
 
-  function handleSubmit(formData: FormData) {
+  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
     startTransition(async () => {
       const result = await onSubmit(formData);
       if (result?.error) {
@@ -74,7 +76,7 @@ export function EntryFormModal({
           </DialogDescription>
         </DialogHeader>
 
-        <form action={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="date">Date</Label>
