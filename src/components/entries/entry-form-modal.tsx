@@ -21,7 +21,7 @@ interface EntryFormModalProps {
   type: EntryType;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (formData: FormData) => Promise<{ error?: Record<string, string[]>; success?: boolean }>;
+  onSubmit: (data: Record<string, unknown>) => Promise<{ error?: Record<string, string[]>; success?: boolean }>;
   initialData?: {
     id?: string;
     date: string;
@@ -43,15 +43,31 @@ export function EntryFormModal({
   const [isPending, startTransition] = useTransition();
   const [errors, setErrors] = useState<Record<string, string[]>>({});
 
-  const categories =
-    type === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+  const categories = type === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
   const isEditing = !!initialData?.id;
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+
+    // Convert FormData to a plain object for JSON fetch
+    const data: Record<string, unknown> = {};
+    data.date = formData.get("date") as string;
+    data.description = formData.get("description") as string;
+    data.category = formData.get("category") as string;
+    data.amount = formData.get("amount") as string;
+    data.currency = formData.get("currency") as string || "CHF";
+
+    if (type === "income") {
+      data.client = formData.get("client") as string || "";
+      data.vatIncluded = formData.get("vatIncluded") === "true" ? "true" : "";
+    } else {
+      data.vendor = formData.get("vendor") as string || "";
+      data.deductible = formData.get("deductible") === "true" ? "true" : "";
+    }
+
     startTransition(async () => {
-      const result = await onSubmit(formData);
+      const result = await onSubmit(data);
       if (result?.error) {
         setErrors(result.error);
       } else {
@@ -66,13 +82,10 @@ export function EntryFormModal({
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
           <DialogTitle>
-            {isEditing ? "Edit" : "Add"}{" "}
-            {type === "income" ? "Income" : "Expense"}
+            {isEditing ? "Edit" : "Add"} {type === "income" ? "Income" : "Expense"}
           </DialogTitle>
           <DialogDescription>
-            {isEditing
-              ? "Update the entry details below."
-              : `Record a new ${type} entry.`}
+            {isEditing ? "Update the entry details below." : `Record a new ${type} entry.`}
           </DialogDescription>
         </DialogHeader>
 
@@ -80,102 +93,40 @@ export function EntryFormModal({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="date">Date</Label>
-              <Input
-                id="date"
-                name="date"
-                type="date"
-                defaultValue={
-                  initialData?.date || formatDateInput(new Date())
-                }
-                required
-              />
-              {errors.date && (
-                <p className="text-xs text-danger">{errors.date[0]}</p>
-              )}
+              <Input id="date" name="date" type="date" defaultValue={initialData?.date || formatDateInput(new Date())} required />
+              {errors.date && <p className="text-xs text-danger">{errors.date[0]}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="amount">Amount (CHF)</Label>
-              <Input
-                id="amount"
-                name="amount"
-                type="number"
-                step="0.01"
-                min="0"
-                defaultValue={initialData?.amount || ""}
-                placeholder="0.00"
-                required
-              />
-              {errors.amount && (
-                <p className="text-xs text-danger">{errors.amount[0]}</p>
-              )}
+              <Input id="amount" name="amount" type="number" step="0.01" min="0" defaultValue={initialData?.amount || ""} placeholder="0.00" required />
+              {errors.amount && <p className="text-xs text-danger">{errors.amount[0]}</p>}
             </div>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="description">Description</Label>
-            <Input
-              id="description"
-              name="description"
-              defaultValue={initialData?.description || ""}
-              placeholder={
-                type === "income"
-                  ? "e.g. Web development project"
-                  : "e.g. Office rent January"
-              }
-              required
-            />
-            {errors.description && (
-              <p className="text-xs text-danger">{errors.description[0]}</p>
-            )}
+            <Input id="description" name="description" defaultValue={initialData?.description || ""} placeholder={type === "income" ? "e.g. Web development project" : "e.g. Office rent January"} required />
+            {errors.description && <p className="text-xs text-danger">{errors.description[0]}</p>}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="category">Category</Label>
-              <Select
-                id="category"
-                name="category"
-                defaultValue={initialData?.category || ""}
-                options={categories.map((c) => ({ value: c, label: c }))}
-                placeholder="Select category"
-                required
-              />
-              {errors.category && (
-                <p className="text-xs text-danger">{errors.category[0]}</p>
-              )}
+              <Select id="category" name="category" defaultValue={initialData?.category || ""} options={categories.map((c) => ({ value: c, label: c }))} placeholder="Select category" required />
+              {errors.category && <p className="text-xs text-danger">{errors.category[0]}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor={type === "income" ? "client" : "vendor"}>
                 {type === "income" ? "Client" : "Vendor"}{" "}
                 <span className="text-muted-foreground">(optional)</span>
               </Label>
-              <Input
-                id={type === "income" ? "client" : "vendor"}
-                name={type === "income" ? "client" : "vendor"}
-                defaultValue={initialData?.clientOrVendor || ""}
-                placeholder={
-                  type === "income" ? "Client name" : "Vendor name"
-                }
-              />
+              <Input id={type === "income" ? "client" : "vendor"} name={type === "income" ? "client" : "vendor"} defaultValue={initialData?.clientOrVendor || ""} placeholder={type === "income" ? "Client name" : "Vendor name"} />
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id={type === "income" ? "vatIncluded" : "deductible"}
-              name={type === "income" ? "vatIncluded" : "deductible"}
-              defaultChecked={
-                initialData?.vatOrDeductible ??
-                (type === "expense" ? true : false)
-              }
-              value="true"
-              className="h-4 w-4 rounded border-input text-primary focus:ring-ring cursor-pointer"
-            />
-            <Label
-              htmlFor={type === "income" ? "vatIncluded" : "deductible"}
-              className="cursor-pointer"
-            >
+            <input type="checkbox" id={type === "income" ? "vatIncluded" : "deductible"} name={type === "income" ? "vatIncluded" : "deductible"} defaultChecked={initialData?.vatOrDeductible ?? (type === "expense")} value="true" className="h-4 w-4 rounded border-input text-primary focus:ring-ring cursor-pointer" />
+            <Label htmlFor={type === "income" ? "vatIncluded" : "deductible"} className="cursor-pointer">
               {type === "income" ? "VAT included" : "Tax deductible"}
             </Label>
           </div>
@@ -183,20 +134,8 @@ export function EntryFormModal({
           <input type="hidden" name="currency" value="CHF" />
 
           <div className="flex justify-end gap-2 pt-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending
-                ? "Saving..."
-                : isEditing
-                  ? "Update"
-                  : "Add Entry"}
-            </Button>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button type="submit" disabled={isPending}>{isPending ? "Saving..." : isEditing ? "Update" : "Add Entry"}</Button>
           </div>
         </form>
       </DialogContent>

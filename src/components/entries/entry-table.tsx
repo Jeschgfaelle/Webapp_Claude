@@ -1,21 +1,12 @@
 "use client";
 
 import { useState, useTransition, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EntryFormModal } from "./entry-form-modal";
 import { formatCHF, formatDate, formatDateInput } from "@/lib/format";
 import { Pencil, Trash2, Plus, FileText } from "lucide-react";
-import {
-  createIncomeEntry,
-  updateIncomeEntry,
-  deleteIncomeEntry,
-} from "@/lib/actions/income";
-import {
-  createExpenseEntry,
-  updateExpenseEntry,
-  deleteExpenseEntry,
-} from "@/lib/actions/expenses";
 
 interface Entry {
   id: string;
@@ -33,34 +24,50 @@ interface EntryTableProps {
   totalLabel?: string;
 }
 
-export function EntryTable({
-  type,
-  entries,
-  totalLabel = "Total",
-}: EntryTableProps) {
+export function EntryTable({ type, entries, totalLabel = "Total" }: EntryTableProps) {
   const [addOpen, setAddOpen] = useState(false);
   const [editEntry, setEditEntry] = useState<Entry | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const [isPending, setIsPending] = useState(false);
+  const router = useRouter();
 
   const total = entries.reduce((sum, e) => sum + e.amount, 0);
+  const apiPath = type === "income" ? "/api/income" : "/api/expenses";
 
-  // Call the correct server action based on type — no prop passing
-  async function handleAdd(formData: FormData) {
-    if (type === "income") return createIncomeEntry(formData);
-    return createExpenseEntry(formData);
-  }
-
-  async function handleEdit(id: string, formData: FormData) {
-    if (type === "income") return updateIncomeEntry(id, formData);
-    return updateExpenseEntry(id, formData);
-  }
-
-  function handleDelete(id: string) {
-    if (!confirm("Are you sure you want to delete this entry?")) return;
-    startTransition(async () => {
-      if (type === "income") await deleteIncomeEntry(id);
-      else await deleteExpenseEntry(id);
+  async function handleAdd(data: Record<string, unknown>) {
+    const res = await fetch(apiPath, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
     });
+    const result = await res.json();
+    if (res.ok) router.refresh();
+    return result;
+  }
+
+  async function handleEdit(id: string, data: Record<string, unknown>) {
+    const res = await fetch(apiPath, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, ...data }),
+    });
+    const result = await res.json();
+    if (res.ok) router.refresh();
+    return result;
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm("Are you sure you want to delete this entry?")) return;
+    setIsPending(true);
+    try {
+      const res = await fetch(apiPath, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      if (res.ok) router.refresh();
+    } finally {
+      setIsPending(false);
+    }
   }
 
   if (entries.length === 0) {
@@ -76,9 +83,7 @@ export function EntryTable({
           <div className="rounded-full bg-muted p-4 mb-4">
             <FileText className="h-8 w-8 text-muted-foreground" />
           </div>
-          <h3 className="text-lg font-semibold">
-            No {type} entries yet
-          </h3>
+          <h3 className="text-lg font-semibold">No {type} entries yet</h3>
           <p className="text-sm text-muted-foreground mt-1 max-w-sm">
             Start tracking your {type} by adding your first entry.
             This data will power your forecasts and runway calculations.
@@ -103,9 +108,7 @@ export function EntryTable({
       <div className="flex items-center justify-between">
         <div className="text-sm text-muted-foreground">
           {entries.length} entries · {totalLabel}:{" "}
-          <span className="font-semibold text-foreground">
-            {formatCHF(total)}
-          </span>
+          <span className="font-semibold text-foreground">{formatCHF(total)}</span>
         </div>
         <Button onClick={() => setAddOpen(true)}>
           <Plus className="h-4 w-4 mr-1" />
@@ -130,10 +133,7 @@ export function EntryTable({
             </thead>
             <tbody>
               {entries.map((entry) => (
-                <tr
-                  key={entry.id}
-                  className="border-b last:border-0 hover:bg-muted/30 transition-colors"
-                >
+                <tr key={entry.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
                   <td className="p-3 whitespace-nowrap">{formatDate(entry.date)}</td>
                   <td className="p-3">
                     <div className="flex items-center gap-2">
@@ -146,18 +146,11 @@ export function EntryTable({
                     </div>
                   </td>
                   <td className="p-3 text-muted-foreground">{entry.clientOrVendor || "—"}</td>
-                  <td className="p-3">
-                    <Badge variant="outline">{entry.category}</Badge>
-                  </td>
+                  <td className="p-3"><Badge variant="outline">{entry.category}</Badge></td>
                   <td className="p-3 text-right font-medium whitespace-nowrap">{formatCHF(entry.amount)}</td>
                   <td className="p-3 text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => setEditEntry(entry)}
-                      >
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditEntry(entry)}>
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
                       <Button
@@ -178,23 +171,14 @@ export function EntryTable({
         </div>
       </div>
 
-      {/* Add Modal */}
-      <EntryFormModal
-        type={type}
-        open={addOpen}
-        onOpenChange={setAddOpen}
-        onSubmit={handleAdd}
-      />
+      <EntryFormModal type={type} open={addOpen} onOpenChange={setAddOpen} onSubmit={handleAdd} />
 
-      {/* Edit Modal */}
       {editEntry && (
         <EntryFormModal
           type={type}
           open={!!editEntry}
-          onOpenChange={(open) => {
-            if (!open) setEditEntry(null);
-          }}
-          onSubmit={(formData) => handleEdit(editEntry.id, formData)}
+          onOpenChange={(open) => { if (!open) setEditEntry(null); }}
+          onSubmit={(data) => handleEdit(editEntry.id, data)}
           initialData={{
             id: editEntry.id,
             date: formatDateInput(editEntry.date),
