@@ -11,7 +11,8 @@
     "db:migrate": "npx prisma migrate dev --name init",
     "db:seed": "npx tsx prisma/seed.ts",
     "db:reset": "npx prisma migrate reset --force && npx tsx prisma/seed.ts",
-    "setup": "npx prisma migrate dev --name init && npx tsx prisma/seed.ts"
+    "setup": "npx prisma generate && npx prisma migrate dev --name init && npx tsx prisma/seed.ts",
+    "postinstall": "npx prisma generate"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"
