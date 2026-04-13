@@ -1,0 +1,60 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model IncomeEntry {
+  id          String   @id @default(cuid())
+  date        DateTime
+  client      String?
+  description String
+  category    String
+  amount      Float
+  currency    String   @default("CHF")
+  vatIncluded Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ExpenseEntry {
+  id          String   @id @default(cuid())
+  date        DateTime
+  vendor      String?
+  description String
+  category    String
+  amount      Float
+  currency    String   @default("CHF")
+  deductible  Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model RecurringItem {
+  id        String    @id @default(cuid())
+  type      String // 'income' | 'expense'
+  name      String
+  amount    Float
+  cadence   String // 'monthly' | 'quarterly' | 'yearly'
+  startDate DateTime
+  endDate   DateTime?
+  category  String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Settings {
+  id                 String   @id @default("default")
+  startingCash       Float    @default(0)
+  minCashBuffer      Float    @default(5000)
+  horizonMonths      Int      @default(12)
+  effectiveTaxRate   Float    @default(22)
+  taxDeductions      Float    @default(0)
+  taxReservePercent  Float    @default(22)
+  taxPaymentSchedule String   @default("monthly") // 'monthly' | 'quarterly'
+  currency           String   @default("CHF")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
