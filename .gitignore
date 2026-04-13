@@ -5,3 +5,4 @@ prisma/dev.db
 *.db-journal
 .env
 .env.local
+src/generated/

@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -34,10 +35,10 @@ model ExpenseEntry {
 
 model RecurringItem {
   id        String    @id @default(cuid())
-  type      String // 'income' | 'expense'
+  type      String
   name      String
   amount    Float
-  cadence   String // 'monthly' | 'quarterly' | 'yearly'
+  cadence   String
   startDate DateTime
   endDate   DateTime?
   category  String?
@@ -53,7 +54,7 @@ model Settings {
   effectiveTaxRate   Float    @default(22)
   taxDeductions      Float    @default(0)
   taxReservePercent  Float    @default(22)
-  taxPaymentSchedule String   @default("monthly") // 'monthly' | 'quarterly'
+  taxPaymentSchedule String   @default("monthly")
   currency           String   @default("CHF")
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
