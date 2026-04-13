@@ -3,11 +3,6 @@
 import { EntryTable } from "@/components/entries/entry-table";
 import { FilterBar } from "@/components/entries/filter-bar";
 import { EXPENSE_CATEGORIES } from "@/lib/validations";
-import {
-  createExpenseEntry,
-  updateExpenseEntry,
-  deleteExpenseEntry,
-} from "@/lib/actions/expenses";
 import { TrendingDown } from "lucide-react";
 
 interface SerializedExpense {
@@ -53,9 +48,6 @@ export function ExpensesPageClient({
       <EntryTable
         type="expense"
         entries={tableEntries}
-        onAdd={createExpenseEntry}
-        onEdit={updateExpenseEntry}
-        onDelete={deleteExpenseEntry}
         totalLabel="Total expenses"
       />
     </div>

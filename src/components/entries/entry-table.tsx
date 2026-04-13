@@ -1,11 +1,21 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EntryFormModal } from "./entry-form-modal";
 import { formatCHF, formatDate, formatDateInput } from "@/lib/format";
 import { Pencil, Trash2, Plus, FileText } from "lucide-react";
+import {
+  createIncomeEntry,
+  updateIncomeEntry,
+  deleteIncomeEntry,
+} from "@/lib/actions/income";
+import {
+  createExpenseEntry,
+  updateExpenseEntry,
+  deleteExpenseEntry,
+} from "@/lib/actions/expenses";
 
 interface Entry {
   id: string;
@@ -20,18 +30,12 @@ interface Entry {
 interface EntryTableProps {
   type: "income" | "expense";
   entries: Entry[];
-  onAdd: (formData: FormData) => Promise<{ error?: Record<string, string[]>; success?: boolean }>;
-  onEdit: (id: string, formData: FormData) => Promise<{ error?: Record<string, string[]>; success?: boolean }>;
-  onDelete: (id: string) => Promise<{ success?: boolean }>;
   totalLabel?: string;
 }
 
 export function EntryTable({
   type,
   entries,
-  onAdd,
-  onEdit,
-  onDelete,
   totalLabel = "Total",
 }: EntryTableProps) {
   const [addOpen, setAddOpen] = useState(false);
@@ -40,10 +44,22 @@ export function EntryTable({
 
   const total = entries.reduce((sum, e) => sum + e.amount, 0);
 
+  // Call the correct server action based on type — no prop passing
+  async function handleAdd(formData: FormData) {
+    if (type === "income") return createIncomeEntry(formData);
+    return createExpenseEntry(formData);
+  }
+
+  async function handleEdit(id: string, formData: FormData) {
+    if (type === "income") return updateIncomeEntry(id, formData);
+    return updateExpenseEntry(id, formData);
+  }
+
   function handleDelete(id: string) {
     if (!confirm("Are you sure you want to delete this entry?")) return;
     startTransition(async () => {
-      await onDelete(id);
+      if (type === "income") await deleteIncomeEntry(id);
+      else await deleteExpenseEntry(id);
     });
   }
 
@@ -56,7 +72,6 @@ export function EntryTable({
             Add {type === "income" ? "Income" : "Expense"}
           </Button>
         </div>
-        {/* Empty state */}
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <div className="rounded-full bg-muted p-4 mb-4">
             <FileText className="h-8 w-8 text-muted-foreground" />
@@ -77,7 +92,7 @@ export function EntryTable({
           type={type}
           open={addOpen}
           onOpenChange={setAddOpen}
-          onSubmit={onAdd}
+          onSubmit={handleAdd}
         />
       </div>
     );
@@ -103,24 +118,14 @@ export function EntryTable({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-muted/50">
-                <th className="text-left p-3 font-medium text-muted-foreground">
-                  Date
-                </th>
-                <th className="text-left p-3 font-medium text-muted-foreground">
-                  Description
-                </th>
+                <th className="text-left p-3 font-medium text-muted-foreground">Date</th>
+                <th className="text-left p-3 font-medium text-muted-foreground">Description</th>
                 <th className="text-left p-3 font-medium text-muted-foreground">
                   {type === "income" ? "Client" : "Vendor"}
                 </th>
-                <th className="text-left p-3 font-medium text-muted-foreground">
-                  Category
-                </th>
-                <th className="text-right p-3 font-medium text-muted-foreground">
-                  Amount
-                </th>
-                <th className="text-right p-3 font-medium text-muted-foreground w-[100px]">
-                  Actions
-                </th>
+                <th className="text-left p-3 font-medium text-muted-foreground">Category</th>
+                <th className="text-right p-3 font-medium text-muted-foreground">Amount</th>
+                <th className="text-right p-3 font-medium text-muted-foreground w-[100px]">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -129,9 +134,7 @@ export function EntryTable({
                   key={entry.id}
                   className="border-b last:border-0 hover:bg-muted/30 transition-colors"
                 >
-                  <td className="p-3 whitespace-nowrap">
-                    {formatDate(entry.date)}
-                  </td>
+                  <td className="p-3 whitespace-nowrap">{formatDate(entry.date)}</td>
                   <td className="p-3">
                     <div className="flex items-center gap-2">
                       {entry.description}
@@ -142,15 +145,11 @@ export function EntryTable({
                       )}
                     </div>
                   </td>
-                  <td className="p-3 text-muted-foreground">
-                    {entry.clientOrVendor || "—"}
-                  </td>
+                  <td className="p-3 text-muted-foreground">{entry.clientOrVendor || "—"}</td>
                   <td className="p-3">
                     <Badge variant="outline">{entry.category}</Badge>
                   </td>
-                  <td className="p-3 text-right font-medium whitespace-nowrap">
-                    {formatCHF(entry.amount)}
-                  </td>
+                  <td className="p-3 text-right font-medium whitespace-nowrap">{formatCHF(entry.amount)}</td>
                   <td className="p-3 text-right">
                     <div className="flex items-center justify-end gap-1">
                       <Button
@@ -184,7 +183,7 @@ export function EntryTable({
         type={type}
         open={addOpen}
         onOpenChange={setAddOpen}
-        onSubmit={onAdd}
+        onSubmit={handleAdd}
       />
 
       {/* Edit Modal */}
@@ -195,7 +194,7 @@ export function EntryTable({
           onOpenChange={(open) => {
             if (!open) setEditEntry(null);
           }}
-          onSubmit={(formData) => onEdit(editEntry.id, formData)}
+          onSubmit={(formData) => handleEdit(editEntry.id, formData)}
           initialData={{
             id: editEntry.id,
             date: formatDateInput(editEntry.date),

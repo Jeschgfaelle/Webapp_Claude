@@ -3,11 +3,6 @@
 import { EntryTable } from "@/components/entries/entry-table";
 import { FilterBar } from "@/components/entries/filter-bar";
 import { INCOME_CATEGORIES } from "@/lib/validations";
-import {
-  createIncomeEntry,
-  updateIncomeEntry,
-  deleteIncomeEntry,
-} from "@/lib/actions/income";
 import { TrendingUp } from "lucide-react";
 
 interface SerializedIncome {
@@ -49,9 +44,6 @@ export function IncomePageClient({ entries }: { entries: SerializedIncome[] }) {
       <EntryTable
         type="income"
         entries={tableEntries}
-        onAdd={createIncomeEntry}
-        onEdit={updateIncomeEntry}
-        onDelete={deleteIncomeEntry}
         totalLabel="Total income"
       />
     </div>
